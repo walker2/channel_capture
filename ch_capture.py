@@ -29,7 +29,7 @@ class Req:
 
 
 class User:
-    def __init__(self, num, lamda, N, M, PMAX, PMIN):
+    def __init__(self, num, lamda, N, M, PMAX, PMIN, cheater=False):
         self.num = num
         self.last_window = True
         self.last_prob = 1
@@ -38,6 +38,7 @@ class User:
         self.req_num = 0
         self.PMAX = PMAX
         self.PMIN = PMIN
+        self.cheater = cheater
 
         # Generate poisson values
         Y = np.random.exponential(scale=M / lamda, size=N)
@@ -55,7 +56,10 @@ class User:
         prob = 0
         # Check if last_window was a success
         if self.last_window:
-            prob = self.PMAX
+            if self.cheater:
+                prob = 1
+            else:
+                prob = self.PMAX
         else:
             prob = max(self.last_prob / 2, self.PMIN)
 
@@ -84,8 +88,7 @@ class Success:
         self.lamda = lamda
 
 
-
-def simulate(N, M, PMAX, PMIN, cheater=None):
+def simulate(N, M, PMAX, PMIN, cheater=False):
     exp_d = []
     output_stream = []
     X = np.arange(0.04, 0.6, 0.04)
@@ -96,9 +99,13 @@ def simulate(N, M, PMAX, PMIN, cheater=None):
         print('lambda:', lamda)
         users = []
 
-        for i in range(0, M):
-            users.append(User(i, lamda, N, M, PMAX, PMIN))
-
+        if not cheater:
+            for i in range(0, M):
+                users.append(User(i, lamda, N, M, PMAX, PMIN))
+        else:
+            users.append(User(0, lamda, N, M, PMAX, PMIN, cheater=True))
+            for i in range(1, M):
+                users.append(User(i, lamda, N, M, PMAX, PMIN))
 
         output = 0
         for window in range(0, N):
@@ -202,6 +209,9 @@ def simulate(N, M, PMAX, PMIN, cheater=None):
     print('Your longest run was {}'.format(maxx))
 
     dirname = 'datapr_{0:.2f}'.format(round(PMAX, 2) * 100)
+    if cheater: 
+        dirname = 'cheater'
+
     if not os.path.isdir(dirname):
         os.makedirs(dirname)
 
@@ -248,8 +258,11 @@ def simulate(N, M, PMAX, PMIN, cheater=None):
 
     return [len(list_of_successes), len(lst)]
 
-def plot_streaks(PMAX):
+def plot_streaks(PMAX, cheater=False):
     dirname = 'datapr_{0:.2f}'.format(round(PMAX, 2) * 100)
+    if cheater: 
+        dirname = 'cheater'
+
     if not os.path.isdir(dirname):
         os.makedirs(dirname)
 
@@ -281,10 +294,12 @@ def plot_streaks(PMAX):
 
     
 
-def plot_first_and_last(PMAX):
+def plot_first_and_last(PMAX, cheater=False):
     plot_length = 100
 
     dirname = 'datapr_{0:.2f}'.format(round(PMAX, 2) * 100)
+    if cheater: 
+        dirname = 'cheater'
     if not os.path.isdir(dirname):
         os.makedirs(dirname)
 

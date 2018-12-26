@@ -10,10 +10,11 @@ def test_pmax():
     len_diff = []
     
     pmaxes = np.arange(0.20, 1, 0.15)
+    pmin = 0.05
     for pmax in pmaxes:
         pmax = round(pmax, 2)
         print('PMAX IS {0:.2f}'.format(pmax))
-        all_len, conv_len = simulate(N=20000, M=10, PMAX=pmax, PMIN=0.05)
+        all_len, conv_len = simulate(N=20000, M=10, PMAX=pmax, PMIN=pmin)
         plot_streaks(PMAX=pmax)
         plot_first_and_last(PMAX=pmax)
         all_lengths.append(all_len)
@@ -46,7 +47,15 @@ def test_pmax():
     plt.close()
 
 def test_cheater():
-    
+    pmax = 0.25
+    all_len, conv_len = simulate(N=50000, M=10, PMAX=pmax, PMIN=0.05, cheater=True)
+    plot_streaks(PMAX=pmax, cheater=True)
+    plot_first_and_last(PMAX=pmax, cheater=True)
+
+    print(all_len)
+    print(conv_len)
+    print(all_len - conv_len)
+
 
 def main():
     # Should we watch all the lambdas? Yes, because strange things occur in higher lamdbas
@@ -68,7 +77,9 @@ def main():
     #
     #   3.  Create model of one cheating user and take best PMAX from step two for other users
     #       Test system like in first step. How one dishonest user would affect all system and others?
+    
     test_pmax()
+    #test_cheater()
 
 
 
