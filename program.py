@@ -1,15 +1,22 @@
 
 from ch_capture import simulate, plot_streaks, plot_first_and_last
+from old_ch_capture import old_simulate
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import pickle
 
 def test_pmax():
     all_lengths = []
     conv_lengths = []
     len_diff = []
     
-    pmaxes = np.arange(0.20, 1, 0.15)
+    pmaxes = np.arange(0.1, 0.25, 0.05)
+
+    plt.figure()
+    X = np.arange(0.04, 0.4, 0.04)
     pmin = 0.05
+    exp_d = []
     for pmax in pmaxes:
         pmax = round(pmax, 2)
         print('PMAX IS {0:.2f}'.format(pmax))
@@ -20,40 +27,83 @@ def test_pmax():
         conv_lengths.append(conv_len)
         len_diff.append(all_len - conv_len)
 
-    print(all_lengths)
-    print(conv_lengths)
-    print(len_diff)
+        dirname = 'datapr_{0:.2f}'.format(round(pmax, 2) * 100)
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
 
-    plt.figure()
-    plt.plot(pmaxes, all_lengths)
-    plt.xlabel('Probabilites')
-    plt.ylabel('Number of successes')
-    plt.savefig('res/alllen.png')
+        print(dirname)
+        exp_d.append(pickle.load(open(dirname + '/delay.dump', 'rb')))
+
+    print(exp_d)
+    plt.plot(X, exp_d[0], label='pmax={}'.format(round(0.1, 2)))
+    plt.plot(X, exp_d[1], label='pmax={}'.format(round(0.15, 2)))
+    plt.plot(X, exp_d[2], label='pmax={}'.format(round(0.2, 2)))
+    plt.xlabel('Lambda')
+    plt.ylabel('Delay')
+    plt.legend()
+    plt.savefig('res/delay.png')
     plt.close()
+
     
-    plt.figure()
-    plt.plot(pmaxes, conv_lengths)
-    plt.xlabel('Probabilites')
-    plt.ylabel('Convoluted number of successes')
-    plt.savefig('res/convlen.png')
-    plt.close()
-
-    plt.figure()
-    plt.plot(pmaxes, len_diff)
-    plt.xlabel('Probabilites')
-    plt.ylabel('Convoluted number of successes')
-    plt.savefig('res/lendiff.png')
-    plt.close()
+    #print(all_lengths)
+    #print(conv_lengths)
+    #print(len_diff)
+#
+    #plt.figure()
+    #plt.plot(pmaxes, all_lengths)
+    #plt.xlabel('Probabilites')
+    #plt.ylabel('Number of successes')
+    #plt.savefig('res/alllen.png')
+    #plt.close()
+    #
+    #plt.figure()
+    #plt.plot(pmaxes, conv_lengths)
+    #plt.xlabel('Probabilites')
+    #plt.ylabel('Convoluted number of successes')
+    #plt.savefig('res/convlen.png')
+    #plt.close()
+# #
+    #plt.figure()
+    #plt.plot(pmaxes, len_diff)
+    #plt.xlabel('Probabilites')
+    #plt.ylabel('Convoluted number of successes')
+    #plt.savefig('res/lendiff.png')
+    #plt.close()
 
 def test_cheater():
-    pmax = 0.25
-    all_len, conv_len = simulate(N=50000, M=10, PMAX=pmax, PMIN=0.05, cheater=True)
+
+    
+    pmax = 0.2
+    
+    all_len, conv_len = simulate(N=50000, M=11, PMAX=pmax, PMIN=0.05, cheater=True)
     plot_streaks(PMAX=pmax, cheater=True)
     plot_first_and_last(PMAX=pmax, cheater=True)
 
     print(all_len)
     print(conv_len)
     print(all_len - conv_len)
+    X = np.arange(0.04, 0.4, 0.04)
+    dirname = 'datapr_{0:.2f}'.format(round(pmax, 2) * 100)
+
+    plt.figure()    
+    plt.plot(X, pickle.load(open(dirname + '/delay.dump', 'rb')), label='honest')
+    plt.plot(X, pickle.load(open('cheater/delay.dump', 'rb')), label='cheating')
+    plt.xlabel('Lambda')
+    plt.ylabel('Delay')
+    plt.legend()
+    plt.savefig('res/cheater_delay.png')
+    plt.close()
+
+def old_test_cheater():
+    pmax = 0.2
+    all_len, conv_len = old_simulate(N=50000, M=10, PMAX=pmax, PMIN=0.05, cheater=True)
+    plot_streaks(PMAX=pmax, cheater=True)
+    plot_first_and_last(PMAX=pmax, cheater=True)
+
+    print(all_len)
+    print(conv_len)
+    print(all_len - conv_len)
+
 
 
 def main():
@@ -78,8 +128,9 @@ def main():
     #       Test system like in first step. How one dishonest user would affect all system and others?
     #
     #  -- plot User_pr(Win_Num), should be easy enough. 10 graphs in one plot, one should rise up from another
-    test_pmax()
+    #test_pmax()
     #test_cheater()
+    old_test_cheater()
 
 
 

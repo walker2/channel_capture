@@ -91,7 +91,7 @@ class Success:
 def simulate(N, M, PMAX, PMIN, cheater=False):
     exp_d = []
     output_stream = []
-    X = np.arange(0.04, 0.6, 0.04)
+    X = np.arange(0.04, 0.4, 0.04)
 
     list_of_successes = []
     users_sent = []
@@ -100,11 +100,11 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
         users = []
 
         if not cheater:
-            for i in range(0, M):
+            for i in range(1, M):
                 users.append(User(i, lamda, N, M, PMAX, PMIN))
         else:
-            users.append(User(0, lamda, N, M, PMAX, PMIN, cheater=True))
-            for i in range(1, M):
+            users.append(User(1, lamda, N, M, PMAX, PMIN, cheater=True))
+            for i in range(2, M):
                 users.append(User(i, lamda, N, M, PMAX, PMIN))
 
         output = 0
@@ -241,6 +241,8 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
     plt.savefig(dirname + '/delay.png')
     plt.close()
 
+    pickle.dump(exp_d, open(dirname + '/delay.dump', 'wb'))
+
     plt.figure()
     fig, ax = plt.subplots()
     ax.bar(range(len(oredered_user_sent)), [v for k,v in oredered_user_sent.items()], width=0.85, align='center', linewidth=0)
@@ -281,7 +283,7 @@ def plot_streaks(PMAX, cheater=False):
         height = rect.get_height()
     
         window = re.split('-', streaks[cnt][2])
-        plt.text(rect.get_x() + rect.get_width()/2.0, height, window[0] + '\n' + window[1] + '\n' + '{}'.format(streaks[cnt][3]), ha='center', va='bottom', fontsize=9)
+        plt.text(rect.get_x() + rect.get_width()/2.0, height, window[0] + '\n' + window[1] + '\n' + '{:,.2f}'.format(streaks[cnt][3]), ha='center', va='bottom', fontsize=9)
         
         cnt += 1
 

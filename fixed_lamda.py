@@ -32,7 +32,10 @@ class User:
     def __init__(self, num, lamda, N, M, PMAX, PMIN, cheater=False):
         self.num = num
         self.last_window = True
-        self.last_prob = 1
+        if not cheater:
+            self.last_prob = PMAX
+        else:
+            self.last_prob = 1
         self.queue = deque()
         self.requests = []
         self.req_num = 0
@@ -297,9 +300,9 @@ def simulate(N, M, PMAX, PMIN, l, window_left, window_right, cheater=False):
 
 
 window_num = 20000
-N = 10
+N = 11
 #pmaxes = np.arange(0.20, 1, 0.15)
-pmaxes = [0.95]
+pmaxes = [0.2]
 for pmax in pmaxes:
     pmax = round(pmax, 2)
-    simulate(window_num, N, pmax, 0.01, l=0.56, window_left=15000, window_right=15100)
+    simulate(window_num, N, pmax, 0.05, l=0.36, window_left=15000, window_right=15500, cheater=True)
