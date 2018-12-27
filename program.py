@@ -1,5 +1,4 @@
 
-
 from ch_capture import simulate, plot_streaks, plot_first_and_last
 import numpy as np
 import matplotlib.pyplot as plt
@@ -77,7 +76,8 @@ def main():
     #
     #   3.  Create model of one cheating user and take best PMAX from step two for other users
     #       Test system like in first step. How one dishonest user would affect all system and others?
-    
+    #
+    #  -- plot User_pr(Win_Num), should be easy enough. 10 graphs in one plot, one should rise up from another
     test_pmax()
     #test_cheater()
 

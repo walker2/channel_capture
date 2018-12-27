@@ -39,6 +39,7 @@ class User:
         self.PMAX = PMAX
         self.PMIN = PMIN
         self.cheater = cheater
+        self.all_prob = []
 
         # Generate poisson values
         Y = np.random.exponential(scale=M / lamda, size=N)
@@ -63,6 +64,7 @@ class User:
         else:
             prob = max(self.last_prob / 2, self.PMIN)
 
+
         self.last_prob = prob
 
         rand = np.random.random()
@@ -70,6 +72,8 @@ class User:
         return rand < prob
 
     def update_queue(self, win_num):
+
+        self.all_prob.append(self.last_prob)
         # Check if we have new message
         while self.req_num < len(self.requests) and self.requests[self.req_num].time_in < (win_num * T + 1):
             # The we have new request
@@ -88,11 +92,17 @@ class Success:
         self.lamda = lamda
 
 
-def simulate(N, M, PMAX, PMIN, cheater=False):
+def simulate(N, M, PMAX, PMIN, l, window_left, window_right, cheater=False):
+    dirname = 'data_pr_{}_lam_{}'.format(round(PMAX, 2) * 100, round(l, 2))
+
+    if not os.path.isdir(dirname):
+        os.makedirs(dirname)
+
     exp_d = []
     output_stream = []
-    X = np.arange(0.04, 0.6, 0.04)
-
+    #X = np.arange(0.04, 0.6, 0.04)
+    X = [l]
+    window_event = []
     list_of_successes = []
     users_sent = []
     for lamda in X:
@@ -100,15 +110,15 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
         users = []
 
         if not cheater:
-            for i in range(0, M):
+            for i in range(1, M):
                 users.append(User(i, lamda, N, M, PMAX, PMIN))
         else:
-            users.append(User(0, lamda, N, M, PMAX, PMIN, cheater=True))
-            for i in range(1, M):
+            users.append(User(1, lamda, N, M, PMAX, PMIN, cheater=True))
+            for i in range(2, M):
                 users.append(User(i, lamda, N, M, PMAX, PMIN))
 
         output = 0
-        for window in range(0, N):
+        for window in range(window_left, window_right):
             # New window
                 
             sending = [] # Array of all users that sending in this window
@@ -122,15 +132,18 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
 
             count = len(sending)
             if count == 0: # We have an EMPTY window, do nothing
+                window_event.append(0)
                 pass
             elif count == 1: # Only one user is sending, so we sending message. SUCCESS
                 output += 1
                 sending[0].send_message(window)
-                list_of_successes.append(Success(sending[0].num, window, lamda))
+                window_event.append(sending[0].num)
+                #list_of_successes.append(Success(sending[0].num, window, lamda))
                 users_sent.append(sending[0].num)
             else: # CONFLICT
                 for user in sending:
                     user.last_window = False
+                window_event.append(0)
 
             # Update our user queues 
             for user in users:
@@ -139,8 +152,8 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
         
         #print('All windows', time.time() - start)
         D = 0
-
         for user in users:
+            
             sent = 0
             for item in user.requests:
                 if item.time_out:
@@ -149,39 +162,50 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
             if sent:
                 D /= sent
 
+        plt.figure()
+
+        for user in users:
+            plt.plot(range(len(window_event)), user.all_prob, label='prob(num)_{}'.format(user.num))
+        
+        plt.xlabel('window number')
+        plt.ylabel('sending probability')
+        plt.title('Lambda')
+        plt.legend()
+        fig = plt.gcf()
+        fig.set_size_inches(16, 10)
+        plt.savefig(dirname + '/prob(num).png')
+        plt.close()
+        
+
         print('D is:', D)
         exp_d.append(D)
         output_stream.append(output / N)
 
-    print('Total number of successes', len(list_of_successes))
+    #print('Total number of successes', len(list_of_successes))
 
     print('Number of successes for each user')
-    users_sent = np.array(users_sent)
-    count = Counter(users_sent)
+    users_sent = np.array(window_event)
+    count = Counter(window_event)
     oredered_user_sent = dict(OrderedDict(count))
-    #print(list(oredered_user_sent))
-
-
-    #for success in sent_user_num:
-    #    print(success.user, success.window, success.lamda)
+    del oredered_user_sent[0]
 
     print('Longest streaks')
 
     lst = []
     last_user_num = -1
-    last_user = list_of_successes[0]
+    last_user = window_event[0]
     streak = 0
     cnt = 0
-    for success in list_of_successes:
-        if last_user.user == success.user:
+    for event in window_event:
+        if last_user == event and event != 0:
             streak += 1
         else:
-            num, count, window, lamda = last_user.user, streak, '{}-{}'.format(last_user.window - streak, last_user.window), last_user.lamda
-            lst.append((num, count, window, lamda))
+            num, count = last_user, streak
+            lst.append((num, count))
             streak = 1
 
         cnt += 1
-        last_user = success
+        last_user = event
 
     print('Convolute list length', len(lst))
     streaks = []
@@ -206,12 +230,6 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
     maxx = max([item[1] for item in lst])
     print('Your longest run was {}'.format(maxx))
 
-    dirname = 'datapr_{0:.2f}'.format(round(PMAX, 2) * 100)
-    if cheater: 
-        dirname = 'cheater'
-
-    if not os.path.isdir(dirname):
-        os.makedirs(dirname)
 
     pickle.dump(lst, open(dirname + '/conv_list.dump', 'wb'))
     pickle.dump(streaks, open(dirname + '/streaks.dump', 'wb'))
@@ -252,19 +270,18 @@ def simulate(N, M, PMAX, PMIN, cheater=False):
     fig = plt.gcf()
     fig.set_size_inches(16, 10)
     fig.savefig(dirname + '/hist.png', dpi=50)
+    plt.close()    
+    
+    plt.figure()
+    fig, ax = plt.subplots()
+    bar1 = ax.bar(range(len(window_event)), [event for event in window_event], width=0.9, align='center', linewidth=0)
+    ax.set_xticks(range(len(window_event)))
+    #ax.set_xticklabels(range(len(window_event)))
+    plt.ylabel('User number')
+    plt.xlabel('Window number')
+    fig.set_size_inches(24,10)
+    fig.savefig(dirname + '/chcap.png', dpi=100)
     plt.close()
-
-    return [len(list_of_successes), len(lst)]
-
-def plot_streaks(PMAX, cheater=False):
-    dirname = 'datapr_{0:.2f}'.format(round(PMAX, 2) * 100)
-    if cheater: 
-        dirname = 'cheater'
-
-    if not os.path.isdir(dirname):
-        os.makedirs(dirname)
-
-    streaks = pickle.load(open(dirname + '/streaks.dump', 'rb'))
 
     plt.figure()
     fig, ax = plt.subplots()
@@ -273,52 +290,16 @@ def plot_streaks(PMAX, cheater=False):
     ax.set_xticklabels([int(t[0]) for t in streaks])
     plt.ylabel('Successes series')
     plt.xlabel('User number')
-
-    cnt = 0
-    last_height = 0
-
-    for rect in bar1:
-        height = rect.get_height()
-    
-        window = re.split('-', streaks[cnt][2])
-        plt.text(rect.get_x() + rect.get_width()/2.0, height, window[0] + '\n' + window[1] + '\n' + '{}'.format(streaks[cnt][3]), ha='center', va='bottom', fontsize=9)
-        
-        cnt += 1
-
-    fig = plt.gcf()
     fig.set_size_inches(24,10)
     fig.savefig(dirname + '/highestseries.png', dpi=100)
     plt.close()
 
-    
-
-def plot_first_and_last(PMAX, cheater=False):
-    plot_length = 100
-
-    dirname = 'datapr_{0:.2f}'.format(round(PMAX, 2) * 100)
-    if cheater: 
-        dirname = 'cheater'
-    if not os.path.isdir(dirname):
-        os.makedirs(dirname)
-
-    lst = pickle.load(open(dirname + '/conv_list.dump', 'rb'))
-
-    left_borders = [0, len(lst) - plot_length]
-
-    for border in left_borders:
-        slc = lst[border:border + plot_length]
-
-        plt.figure()
-        fig, ax = plt.subplots()
-        ax.bar(range(len(slc)), [t[1] for t in slc], width=0.85, align='center', linewidth=0)
-        ax.set_xticks(range(len(slc)))
-        ax.set_xticklabels([int(t[0]) for t in slc])
-        plt.ylabel('Successes series')
-        plt.xlabel('User number')
-
-        fig = plt.gcf()
-        fig.set_size_inches(16, 10)
-        fig.savefig(dirname + '/border_{}.png'.format(border), dpi=100)
-        plt.close()
 
 
+window_num = 20000
+N = 10
+#pmaxes = np.arange(0.20, 1, 0.15)
+pmaxes = [0.95]
+for pmax in pmaxes:
+    pmax = round(pmax, 2)
+    simulate(window_num, N, pmax, 0.01, l=0.56, window_left=15000, window_right=15100)
